@@ -1,42 +1,42 @@
-// --- ส่วนแสดงผลบล็อก (Blocks Definition) ---
-
-// 1. บล็อกอ่านค่า EC (mS/cm) - สำหรับวัดปุ๋ยผัก
-Blockly.Blocks['ec_read_ms'] = {
+Blockly.Blocks['ec_read_ms_pro'] = {
   init: function() {
-    this.appendValueInput("pin").setCheck("Number").appendField("อ่านค่าปุ๋ย EC (mS/cm) ขา");
+    this.appendValueInput("pin")
+        .setCheck("Number")
+        .appendField("อ่านค่า EC (mS/cm) ขา");
+    this.appendValueInput("temp")
+        .setCheck("Number")
+        .appendField("ที่อุณหภูมิ (°C)");
     this.setOutput(true, "Number");
-    this.setColour("#2C97DE");
-    this.setTooltip("อ่านค่าความเข้มข้นปุ๋ยหน่วย mS/cm (เทียบเครื่อง AR8011)");
+    this.setColour("#27AE60"); // สีเขียวเกษตร
+    this.setTooltip("อ่านค่า EC แบบแม่นยำสูง (ชดเชยอุณหภูมิอัตโนมัติ)");
+    this.setHelpUrl("");
   }
 };
 
-// 2. บล็อกอ่านค่า TDS (ppm) - สำหรับวัดคุณภาพน้ำทั่วไป
-Blockly.Blocks['ec_read_tds'] = {
+Blockly.Blocks['ec_read_tds_pro'] = {
   init: function() {
-    this.appendValueInput("pin").setCheck("Number").appendField("อ่านค่า TDS (ppm) ขา");
+    this.appendValueInput("pin")
+        .setCheck("Number")
+        .appendField("อ่านค่า TDS (ppm) ขา");
+    this.appendValueInput("temp")
+        .setCheck("Number")
+        .appendField("ที่อุณหภูมิ (°C)");
     this.setOutput(true, "Number");
-    this.setColour("#2C97DE");
-    this.setTooltip("อ่านค่าสารละลายในน้ำหน่วย ppm");
+    this.setColour("#2980B9"); // สีฟ้าน้ำ
+    this.setTooltip("อ่านค่า TDS แบบแม่นยำสูง (ชดเชยอุณหภูมิอัตโนมัติ)");
+    this.setHelpUrl("");
   }
 };
 
-// 3. บล็อกปรับจูน (Calibration) - หัวใจความแม่นยำ
-Blockly.Blocks['ec_set_kvalue'] = {
+Blockly.Blocks['ec_set_k_pro'] = {
   init: function() {
-    this.appendValueInput("kvalue").setCheck("Number").appendField("ปรับค่าความแม่นยำ (K Value)");
+    this.appendValueInput("k")
+        .setCheck("Number")
+        .appendField("ตั้งค่าจูน Sensor (K-Value)");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour("#E67E22"); // สีส้มสำหรับการตั้งค่า
-    this.setTooltip("ถ้าค่าที่ได้น้อยไปให้เพิ่มเลข (>1.0) ถ้าค่ามากไปให้ลดเลข (<1.0)");
-  }
-};
-
-// 4. บล็อกอ่านแรงดัน (Voltage) - ไว้เช็คว่าเซนเซอร์พังไหม
-Blockly.Blocks['ec_read_voltage'] = {
-  init: function() {
-    this.appendValueInput("pin").setCheck("Number").appendField("เช็คแรงดันเซนเซอร์ (V) ขา");
-    this.setOutput(true, "Number");
-    this.setColour("#95A5A6"); // สีเทาสำหรับ Debug
-    this.setTooltip("ใช้เช็คว่าเซนเซอร์ส่งสัญญาณปกติไหม (ควรอยู่ระหว่าง 0-2.5V)");
+    this.setColour("#D35400"); // สีส้มสำหรับตั้งค่า
+    this.setTooltip("ใส่ค่าตัวคูณเพื่อ Calibrate ให้ตรงกับเครื่อง AR8011 (เช่น 1.2)");
+    this.setHelpUrl("");
   }
 };

@@ -1,51 +1,33 @@
-// =======================
-// EC Sensor Blocks
-// =======================
-Blockly.defineBlocksWithJsonArray([
-    {
-        "type": "ec_read_value",
-        "message0": "อ่านค่า EC (mS/cm) ขา A %1",
-        "args0": [
-            {
-                "type": "input_value",
-                "name": "pin",
-                "check": "Number"
-            }
-        ],
-        "output": "Number",
-        "colour": "#2ecc71",
-        "tooltip": "อ่านค่า EC จาก Gravity EC / TDS Sensor",
-        "helpUrl": ""
-    },
-    {
-        "type": "ec_read_voltage",
-        "message0": "อ่านค่าแรงดัน EC (ขา A %1)",
-        "args0": [
-            {
-                "type": "input_value",
-                "name": "pin",
-                "check": "Number"
-            }
-        ],
-        "output": "Number",
-        "colour": "#2ecc71",
-        "tooltip": "อ่านแรงดันจาก EC Sensor",
-        "helpUrl": ""
-    },
-    {
-        "type": "ec_set_offset",
-        "message0": "ตั้งค่า EC Offset %1",
-        "args0": [
-            {
-                "type": "input_value",
-                "name": "offset",
-                "check": "Number"
-            }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": "#2ecc71",
-        "tooltip": "ปรับค่า Offset สำหรับคาลิเบรท EC",
-        "helpUrl": ""
-    }
-]);
+Blockly.Blocks['ec_read_value'] = {
+  init: function () {
+    this.appendValueInput("pin")
+      .setCheck("Number")
+      .appendField("อ่านค่า EC ขา");
+    this.setOutput(true, "Number");
+    this.setColour(230);
+    this.setTooltip("อ่านค่า EC (mS/cm) ถ้าไม่ได้เสียบ sensor จะได้ -1");
+  }
+};
+
+Blockly.Blocks['ec_read_voltage'] = {
+  init: function () {
+    this.appendValueInput("pin")
+      .setCheck("Number")
+      .appendField("อ่านค่าแรงดัน EC ขา");
+    this.setOutput(true, "Number");
+    this.setColour(200);
+    this.setTooltip("อ่านค่าแรงดันจาก EC sensor (V)");
+  }
+};
+
+Blockly.Blocks['ec_set_offset'] = {
+  init: function () {
+    this.appendValueInput("offset")
+      .setCheck("Number")
+      .appendField("ตั้งค่า EC offset");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(160);
+    this.setTooltip("ตั้งค่า offset สำหรับคาลิเบรท EC");
+  }
+};

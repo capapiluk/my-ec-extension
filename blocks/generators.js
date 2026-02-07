@@ -18,18 +18,16 @@ Blockly.JavaScript['ec_read_value'] = function(block) {
         long sum = 0;
         for (int i = 0; i < 10; i++) {
             sum += analogRead(${pin});
-            delay(2);
         }
 
         float adc = sum / 10.0;
         float voltage = (adc * 3.3) / 4095.0;
 
-        // ❌ sensor ไม่ได้เสียบ
+        // sensor ไม่ได้เสียบ
         if (voltage < 0.1) {
             return -1.0;
         }
 
-        // สูตร EC (Gravity / DFRobot)
         float ecValue =
             (133.42 * voltage * voltage * voltage
             -255.86 * voltage * voltage
@@ -61,7 +59,6 @@ Blockly.JavaScript['ec_read_voltage'] = function(block) {
         long sum = 0;
         for (int i = 0; i < 10; i++) {
             sum += analogRead(${pin});
-            delay(2);
         }
 
         float adc = sum / 10.0;

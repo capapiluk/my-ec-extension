@@ -1,10 +1,10 @@
 {
-  "name": "ph-sensor-extension",
+  "name": "ec-sensor-extension",
   "version": "1.0.0",
-  "description": "Extension สำหรับอ่านค่า pH Sensor พร้อมคาลิเบรท",
+  "description": "Extension สำหรับอ่านค่า EC (mS/cm) จาก Gravity EC / TDS Sensor (ไม่ชดเชยอุณหภูมิ)",
   "main": "extension.js",
-  "keywords": ["ph", "sensor", "microblock", "analog"],
-  "author": "YourName",
+  "keywords": ["ec", "tds", "sensor", "microblock", "analog", "esp32"],
+  "author": "cap_apiluk",
   "license": "MIT",
   "microblock": {
     "blocks": "blocks/blocks.js",

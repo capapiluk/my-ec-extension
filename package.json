@@ -1,0 +1,13 @@
+{
+  "name": "ph-sensor-extension",
+  "version": "1.0.0",
+  "description": "Extension สำหรับอ่านค่า pH Sensor พร้อมคาลิเบรท",
+  "main": "extension.js",
+  "keywords": ["ph", "sensor", "microblock", "analog"],
+  "author": "YourName",
+  "license": "MIT",
+  "microblock": {
+    "blocks": "blocks/blocks.js",
+    "generators": "blocks/generators.js"
+  }
+}

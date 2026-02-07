@@ -40,5 +40,11 @@
                 </block>
             `
         }
+    ],
+    modules: [
+        {
+            name: "ec_sensor",
+            path: "/modules/ec_sensor.py"
+        }
     ]
 });

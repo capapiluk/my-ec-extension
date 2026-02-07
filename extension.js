@@ -1,21 +1,9 @@
-class ECsensor {
-    constructor() {
-        this.name = "EC Sensor";
-        this.description = "EC (Electrical Conductivity) Sensor";
-        this.author = "Your Name";
-        this.category = "Sensor";
-        this.version = "1.0.0";
-        this.icon = "/static/icon.png";
-        this.tags = ["EC", "Sensor", "Water Quality"];
-    }
-
-    getBlocks() {
-        return "blocks.js";
-    }
-
-    getGenerators() {
-        return "generators.js";
-    }
-}
-
-module.exports = ECsensor;
+module.exports = {
+    name: "EC Sensor",
+    description: "EC (Electrical Conductivity) Sensor for water quality measurement",
+    author: "Your Name",
+    category: "Sensor",
+    version: "1.0.0",
+    icon: "/static/icon.png",
+    color: "#2C97DE"
+};

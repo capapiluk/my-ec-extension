@@ -11,7 +11,7 @@ def read_voltage(pin):
         adc.width(machine.ADC.WIDTH_12BIT)
         
         sum_val = 0
-        for _ in range(10):
+        for i in range(10):
             sum_val += adc.read()
             time.sleep_ms(2)
         
@@ -19,7 +19,7 @@ def read_voltage(pin):
         voltage = (adc_val * 3.3) / 4095.0
         return voltage
     except Exception as e:
-        print(f"EC voltage read error: {e}")
+        print("EC voltage read error:", e)
         return -1.0
 
 def read_value(pin):
@@ -30,11 +30,10 @@ def read_value(pin):
         if voltage < 0.1:
             return -1.0
         
-        ec = (133.42 * voltage ** 3 
-              - 255.86 * voltage ** 2 
-              + 857.39 * voltage) * 0.001
+        # สูตร Gravity EC (DFRobot)
+        ec = (133.42 * voltage * voltage * voltage - 255.86 * voltage * voltage + 857.39 * voltage) * 0.001
         
-        ec += ec_offset
+        ec = ec + ec_offset
         
         if ec < 0:
             ec = 0
@@ -43,7 +42,7 @@ def read_value(pin):
         
         return ec
     except Exception as e:
-        print(f"EC read error: {e}")
+        print("EC read error:", e)
         return -1.0
 
 def set_offset(offset):

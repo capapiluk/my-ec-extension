@@ -12,11 +12,14 @@ def read_voltage(pin):
         
         sum_val = 0
         for i in range(10):
-            sum_val += adc.read()
+            raw = adc.read()
+            print("Raw ADC:", raw)  # debug
+            sum_val += raw
             time.sleep_ms(2)
         
         adc_val = sum_val / 10.0
         voltage = (adc_val * 3.3) / 4095.0
+        print("Average ADC:", adc_val, "Voltage:", voltage)  # debug
         return voltage
     except Exception as e:
         print("EC voltage read error:", e)
@@ -26,12 +29,15 @@ def read_value(pin):
     """อ่านค่า EC (mS/cm)"""
     try:
         voltage = read_voltage(pin)
+        print("Voltage for EC calc:", voltage)  # debug
         
         if voltage < 0.1:
+            print("Voltage too low!")  # debug
             return -1.0
         
         # สูตร Gravity EC (DFRobot)
         ec = (133.42 * voltage * voltage * voltage - 255.86 * voltage * voltage + 857.39 * voltage) * 0.001
+        print("Calculated EC:", ec)  # debug
         
         ec = ec + ec_offset
         

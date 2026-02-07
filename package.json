@@ -1,13 +1,11 @@
 {
-  "name": "ec-sensor-extension",
+  "name": "ec-sensor",
   "version": "1.0.0",
-  "description": "Extension สำหรับอ่านค่า EC (mS/cm) จาก Gravity EC / TDS Sensor (ไม่ชดเชยอุณหภูมิ)",
-  "main": "extension.js",
-  "keywords": ["ec", "tds", "sensor", "microblock", "analog", "esp32"],
-  "author": "cap_apiluk",
+  "description": "EC (Electrical Conductivity) Sensor for water quality measurement",
+  "author": "Your Name",
+  "keywords": ["ec", "sensor", "water", "quality"],
   "license": "MIT",
-  "microblock": {
-    "blocks": "blocks/blocks.js",
-    "generators": "blocks/generators.js"
+  "engines": {
+    "blockly": "*"
   }
 }

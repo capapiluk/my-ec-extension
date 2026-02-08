@@ -1,115 +1,193 @@
 # TDS/EC Pro Sensor Extension v4.0.0
 
-## 📁 โครงสร้างไฟล์
+**High Precision Water Quality Sensor for MicroBlock/MicroPython**
+
+ไม่ต้องใช้ Temperature Sensor - ใช้งานง่าย แม่นยำ
+
+---
+
+## 📋 สารบัญ
+
+- [ภาพรวม](#ภาพรวม)
+- [คุณสมบัติ](#คุณสมบัติ)
+- [การติดตั้ง](#การติดตั้ง)
+- [การเชื่อมต่อ Hardware](#การเชื่อมต่อ-hardware)
+- [การใช้งาน](#การใช้งาน)
+- [Blockly Blocks](#blockly-blocks)
+- [การ Calibrate](#การ-calibrate)
+- [ค่ามาตรฐาน](#ค่ามาตรฐาน)
+- [ตัวอย่างโปรเจค](#ตัวอย่างโปรเจค)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## 📖 ภาพรวม
+
+Extension นี้รองรับ **DFRobot Gravity TDS Sensor** สำหรับวัดคุณภาพน้ำ โดยไม่ต้องใช้ Temperature Sensor
+
+### เหมาะสำหรับ:
+- ✅ ระบบไฮโดรโปนิกส์ (Hydroponics)
+- ✅ ระบบกรองน้ำ (Water Filtration)
+- ✅ ตรวจสอบคุณภาพน้ำ (Water Quality Monitoring)
+- ✅ โปรเจคการเกษตร (Agriculture Projects)
+- ✅ งานวิทยาศาสตร์ (Science Projects)
+
+### ไม่เหมาะสำหรับ:
+- ❌ น้ำที่มีอุณหภูมิผันแปรมาก (>5°C variation)
+- ❌ งานที่ต้องการความแม่นยำสูงสุด (Lab-grade)
+
+---
+
+## 🌟 คุณสมบัติ
+
+### ✨ ฟีเจอร์หลัก
+
+1. **ไม่ต้องใช้ Temperature Sensor**
+   - ใช้อุณหภูมิคงที่ 25°C
+   - ประหยัดค่าใช้จ่าย
+   - ติดตั้งง่าย
+
+2. **Median Filter**
+   - อ่านค่า 30 samples
+   - กรองค่าผิดปกติ (Noise)
+   - ค่าเสถียร ไม่กระโดด
+
+3. **Cubic Regression Formula**
+   - สูตรเดียวกับ DFRobot Arduino Library
+   - แม่นยำสูง
+   - ทดสอบแล้วกับ Standard Solution
+
+4. **Auto-save Calibration**
+   - บันทึก K-value ในไฟล์
+   - ไม่หายหลัง Reboot
+   - ไม่ต้องตั้งค่าใหม่
+
+5. **8 Blockly Blocks**
+   - ใช้งานง่าย ไม่ต้องเขียนโค้ด
+   - รองรับทั้ง TDS (ppm) และ EC (mS/cm, µS/cm)
+   - Calibrate ง่ายๆ ใน 1 Block
+
+6. **Dual API**
+   - Simple API: `get_tds_ppm(34)`
+   - Class API: `sensor.update()`
+
+---
+
+## 📦 การติดตั้ง
+
+### โครงสร้างไฟล์:
 
 ```
 tds-ec-pro-sensor/
-├── extension.js                    # ไฟล์หลักของ Extension
-├── blocks.js                       # Blockly Block Definitions
-├── generators.js                   # Python Code Generators
+├── extension.js          # ไฟล์หลักของ Extension
+├── blocks.js            # Blockly Block Definitions
+├── generators.js        # Python Code Generators
 ├── modules/
-│   └── tds_ec_sensor.py           # Python Module สำหรับ ESP32
+│   └── tds_ec_sensor.py # Python Module สำหรับ ESP32
 ├── static/
-│   └── icon.png                   # ไอคอนของ Extension
-└── README.md                      # เอกสารนี้
+│   └── icon.png         # ไอคอน (ต้องสร้างเอง)
+└── README.md           # เอกสารนี้
 ```
 
-## 🚀 การติดตั้ง
+### ขั้นตอนติดตั้ง:
 
-### สำหรับ MicroBlock IDE:
+1. วางโฟลเดอร์ทั้งหมดใน `/extensions/` ของ MicroBlock
+2. รีสตาร์ท IDE
+3. เลือก Extension จากเมนู
 
-1. **Copy โฟลเดอร์ทั้งหมด** ไปยัง:
-   ```
-   /path/to/microblock/extensions/tds-ec-pro-sensor/
-   ```
+---
 
-2. **โครงสร้างที่ถูกต้อง**:
-   ```
-   extensions/
-   └── tds-ec-pro-sensor/
-       ├── extension.js
-       ├── blocks.js
-       ├── generators.js
-       ├── modules/
-       │   └── tds_ec_sensor.py
-       └── static/
-           └── icon.png
-   ```
+## 🔌 การเชื่อมต่อ Hardware
 
-3. **รีสตาร์ท IDE** หรือกด Refresh Extensions
-
-4. **เลือก Extension** จากเมนู Extensions
-
-## 📋 Blocks ทั้งหมด (8 Blocks)
-
-### 📊 การอ่านค่า:
-1. **อ่านค่า TDS (ppm) ขา [pin]**
-2. **อ่านค่า EC (mS/cm) ขา [pin]**
-3. **อ่านค่า EC (µS/cm) ขา [pin]**
-4. **อ่านค่าทั้งหมด (Dict) ขา [pin]**
-5. **แสดงค่าเซ็นเซอร์ ขา [pin]**
-
-### 🔧 การปรับแต่ง:
-6. **ตั้งค่า K-Value [k]**
-7. **Calibrate Sensor ขา [pin] ค่ามาตรฐาน (ppm) [standard]**
-8. **ดูค่า K-Value ปัจจุบัน**
-
-## 🔌 Hardware Connection
+### การต่อสาย:
 
 ```
-TDS/EC Sensor → ESP32
-─────────────────────
-VCC    → 3.3V
-GND    → GND
-Signal → GPIO 34 (ADC Pin)
+TDS Sensor      →    ESP32
+─────────────────────────
+VCC (Red)       →    3.3V
+GND (Black)     →    GND
+Signal (Blue)   →    GPIO 34
 ```
 
-## 💡 ตัวอย่างการใช้งาน
+### ⚠️ ข้อควรระวัง:
+- ใช้ **GPIO 32-39** เท่านั้น (ADC1)
+- **VCC ต่อ 3.3V** ไม่ใช่ 5V
+- อย่าใช้ GPIO 0, 25, 26
 
-### ตัวอย่างที่ 1: อ่านค่า TDS พื้นฐาน
+---
+
+## 🚀 การใช้งาน
+
+### Simplified API (ใช้งานง่าย):
+
 ```python
 import tds_ec_sensor
 
 # อ่านค่า TDS
 tds = tds_ec_sensor.get_tds_ppm(34)
 print(f"TDS: {tds} ppm")
+
+# อ่านค่า EC
+ec = tds_ec_sensor.get_ec_mspcm(34)
+print(f"EC: {ec} mS/cm")
 ```
 
-### ตัวอย่างที่ 2: Calibrate Sensor
-```python
-import tds_ec_sensor
+### Class API (Arduino Style):
 
-# 1. จุ่มเซ็นเซอร์และเครื่องมาตรฐานในน้ำเดียวกัน
-# 2. อ่านค่าจากเครื่องมาตรฐาน (สมมติได้ 650 ppm)
-# 3. Calibrate
-tds_ec_sensor.calibrate_sensor(34, 650)
-
-# 4. ทดสอบอ่านค่าใหม่
-tds_ec_sensor.print_readings(34)
-```
-
-### ตัวอย่างที่ 3: ระบบไฮโดรโปนิกส์
 ```python
 import tds_ec_sensor
 import time
 
-# ตั้งค่า K-value ที่ได้จาก Calibrate
-tds_ec_sensor.set_kvalue(1.1207)
+# Setup
+sensor = tds_ec_sensor.init(pin=34)
 
+# Loop
 while True:
-    # อ่านค่า EC
-    ec = tds_ec_sensor.get_ec_mspcm(34)
-    
-    # ควบคุมตามค่า EC
-    if ec < 1.2:
-        print("⚠️ EC ต่ำเกินไป - เพิ่มปุ๋ย")
-    elif ec > 2.0:
-        print("⚠️ EC สูงเกินไป - เติมน้ำ")
-    else:
-        print(f"✅ EC เหมาะสม: {ec} mS/cm")
-    
-    time.sleep(1800)  # ตรวจสอบทุก 30 นาที
+    sensor.update()
+    tds = sensor.get_tds_value()
+    print(f"TDS: {tds:.0f} ppm")
+    time.sleep(1)
 ```
+
+---
+
+## 🧩 Blockly Blocks
+
+### 8 Blocks ทั้งหมด:
+
+1. **อ่านค่า TDS (ppm) ขา [pin]** - สีฟ้า
+2. **อ่านค่า EC (mS/cm) ขา [pin]** - สีเขียว
+3. **อ่านค่า EC (µS/cm) ขา [pin]** - สีเขียวน้ำทะเล
+4. **ตั้งค่า K-Value [k]** - สีส้ม
+5. **Calibrate Sensor ขา [pin] ค่ามาตรฐาน [ppm]** - สีส้มสด
+6. **ดูค่า K-Value ปัจจุบัน** - สีเทา
+7. **อ่านค่าทั้งหมด (Dict) ขา [pin]** - สีม่วง
+8. **แสดงค่าเซ็นเซอร์ ขา [pin]** - สีน้ำเงินเข้ม
+
+---
+
+## 🔬 การ Calibrate
+
+### ขั้นตอน Calibrate:
+
+```python
+import tds_ec_sensor
+
+# 1. จุ่มเซ็นเซอร์ในสารละลาย 707 ppm
+# 2. Calibrate
+sensor = tds_ec_sensor.init(pin=34)
+sensor.calibrate(707)
+
+# 3. เสร็จสิ้น! K-value บันทึกอัตโนมัติ
+```
+
+### หรือใช้ Blockly:
+
+```blockly
+Calibrate Sensor ขา [34] ค่ามาตรฐาน [707]
+```
+
+---
 
 ## 📊 ค่ามาตรฐาน
 
@@ -129,54 +207,178 @@ while True:
 - น้ำดื่มคุณภาพดี: 50-500
 - น้ำประปา: 200-800
 
-## 🔄 Changelog
-
-### Version 4.0.0 (Current)
-- ✅ ลบการชดเชยอุณหภูมิ (Temperature Compensation)
-- ✅ เพิ่ม Block EC (µS/cm)
-- ✅ เพิ่ม Block Calibrate อัตโนมัติ
-- ✅ เพิ่ม Block อ่านค่าทั้งหมด (Dictionary)
-- ✅ เพิ่ม Block แสดงค่าพร้อมหน่วย
-- ✅ เพิ่ม Block ดูค่า K-Value
-- ✅ ปรับปรุง Median Filter
-- ✅ เปลี่ยนชื่อ module เป็น `tds_ec_sensor`
-- ✅ Default pin เป็น GPIO 34
-
-### Version 3.5.0 (Old)
-- Temperature Compensation
-- 3 Blocks (TDS, EC mS/cm, Set K)
-- Module name: `ec_sensor`
-
-## 💡 Tips & Best Practices
-
-1. **Calibrate ทุก 1-2 เดือน** หรือเมื่อเปลี่ยนเซ็นเซอร์
-2. **ทำความสะอาด** เซ็นเซอร์ด้วยน้ำกลั่นหลังใช้งาน
-3. **เก็บในน้ำกลั่น** อย่าปล่อยให้เซ็นเซอร์แห้ง
-4. **ใช้ EC สำหรับไฮโดร** แม่นยำกว่า TDS
-5. **รอให้ค่าคงที่** ประมาณ 30 วินาทีหลังจุ่ม
-6. **ใช้ ADC Pin** (GPIO 32-39 สำหรับ ESP32)
-
-## ⚠️ ข้อควรระวัง
-
-1. Pin ที่ใช้ต้องเป็น ADC Pin
-2. ต้อง Import module `tds_ec_sensor` ก่อนใช้งาน
-3. Calibrate ที่ช่วงค่าที่จะใช้งานจริง
-4. อย่าใช้ในน้ำที่มีอุณหภูมิสูงเกิน 60°C
-5. อย่าปล่อยให้เซ็นเซอร์แห้ง
-
-## 📞 Support
-
-- Author: Cap_Apiluk
-- Version: 4.0.0
-- Category: Sensor
-- License: MIT
-
-## 🔗 ความสัมพันธ์ระหว่างหน่วย
-
+### ความสัมพันธ์:
 ```
 1 mS/cm = 1000 µS/cm
-1 mS/cm ≈ 500 ppm (conversion factor 0.5)
-
-ตัวอย่าง:
-EC = 1.30 mS/cm = 1300 µS/cm ≈ 650 ppm
+1 mS/cm ≈ 500 ppm
 ```
+
+---
+
+## 💡 ตัวอย่างโปรเจค
+
+### 1. ระบบไฮโดรโปนิกส์อัตโนมัติ
+
+```python
+import tds_ec_sensor
+import machine
+import time
+
+# Setup
+sensor = tds_ec_sensor.init(pin=34)
+pump_nutrients = machine.Pin(26, machine.Pin.OUT)
+pump_water = machine.Pin(27, machine.Pin.OUT)
+
+# Target EC สำหรับผักสลัด
+TARGET_EC_MIN = 1.2
+TARGET_EC_MAX = 2.0
+
+while True:
+    sensor.update()
+    ec = sensor.get_ec_value()
+    
+    if ec < TARGET_EC_MIN:
+        print("⚠️ EC ต่ำ - เพิ่มปุ๋ย")
+        pump_nutrients.on()
+        time.sleep(5)
+        pump_nutrients.off()
+        
+    elif ec > TARGET_EC_MAX:
+        print("⚠️ EC สูง - เติมน้ำ")
+        pump_water.on()
+        time.sleep(10)
+        pump_water.off()
+        
+    else:
+        print(f"✅ EC เหมาะสม: {ec:.2f} mS/cm")
+    
+    time.sleep(300)  # ตรวจสอบทุก 5 นาที
+```
+
+### 2. ตรวจสอบคุณภาพน้ำ
+
+```python
+import tds_ec_sensor
+
+sensor = tds_ec_sensor.init(pin=34)
+
+while True:
+    sensor.update()
+    ec_us = sensor.get_ec_value_us()
+    
+    if ec_us < 50:
+        quality = "น้ำบริสุทธิ์มาก"
+    elif ec_us <= 500:
+        quality = "น้ำดื่มคุณภาพดี ✅"
+    else:
+        quality = "ไม่แนะนำให้ดื่ม ❌"
+    
+    print(f"EC: {ec_us:.0f} µS/cm | {quality}")
+    time.sleep(5)
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### ❓ ปัญหาที่พบบ่อย
+
+#### 1. อ่านค่าได้ 0 ตลอด
+**สาเหตุ**: สายไฟไม่ต่อดี หรือ Pin ผิด
+
+**วิธีแก้**:
+```python
+# ทดสอบ ADC
+import machine
+adc = machine.ADC(machine.Pin(34))
+adc.atten(machine.ADC.ATTN_11DB)
+print(adc.read())  # ต้องได้ 0-4095
+```
+
+#### 2. ค่ากระโดดไปมา
+**สาเหตุ**: เซ็นเซอร์สกปรก
+
+**วิธีแก้**: ล้างเซ็นเซอร์ด้วยน้ำกลั่น
+
+#### 3. ค่าไม่ตรงกับเครื่องมาตรฐาน
+**สาเหตุ**: ยังไม่ได้ Calibrate
+
+**วิธีแก้**: 
+```python
+sensor.calibrate(707)
+```
+
+#### 4. Import Error
+**วิธีแก้**:
+1. ตรวจสอบว่าไฟล์ `tds_ec_sensor.py` อยู่ใน `modules/`
+2. Upload ไฟล์ไปยัง ESP32
+3. Reboot ESP32
+
+---
+
+## 📝 Best Practices
+
+### ✅ ควรทำ:
+1. Calibrate อย่างน้อย 1 ครั้งก่อนใช้งานจริง
+2. ทำความสะอาดเซ็นเซอร์ทุก 1-2 สัปดาห์
+3. เก็บในน้ำกลั่นเมื่อไม่ใช้งาน
+4. รอค่าคงที่ 30 วินาทีหลังจุ่มน้ำ
+5. ใช้ ADC Pin ที่ถูกต้อง (GPIO 32-39)
+
+### ❌ ไม่ควรทำ:
+1. อย่าปล่อยให้แห้งนาน >1 สัปดาห์
+2. อย่าใช้ในน้ำร้อน >60°C
+3. อย่าใช้ GPIO 25, 26
+4. อย่า Calibrate บ่อยเกินไป
+5. อย่าจุ่มลึกเกินเส้น Immersion Line
+
+---
+
+## 📚 API Reference
+
+### Class API
+```python
+sensor = GravityTDS()
+sensor.set_pin(34)
+sensor.begin()
+sensor.update()
+tds = sensor.get_tds_value()
+ec = sensor.get_ec_value()
+sensor.calibrate(707)
+sensor.set_k_value(1.0523)
+sensor.print_info()
+```
+
+### Simplified API
+```python
+tds = get_tds_ppm(pin)
+ec = get_ec_mspcm(pin)
+calibrate_sensor(pin, 707)
+set_kvalue(1.0523)
+print_readings(pin)
+```
+
+---
+
+## 🔗 ข้อมูลเพิ่มเติม
+
+- [DFRobot TDS Sensor Wiki](https://www.dfrobot.com/wiki/index.php/Gravity:_Analog_TDS_Sensor_/_Meter_For_Arduino_SKU:_SEN0244)
+- [ESP32 ADC Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc.html)
+
+---
+
+## 📄 License
+
+GNU Lesser General Public License v3.0
+
+---
+
+## 👤 Author
+
+**Cap_Apiluk**
+- Version: 4.0.0
+- Category: Sensor
+
+---
+
+**Happy Coding! 🚀**

@@ -1,380 +1,421 @@
+"""
+DFRobot Gravity: Analog TDS Sensor/Meter for MicroPython
+Simplified version - No temperature sensor required
+
+Based on: https://www.dfrobot.com/wiki/index.php/Gravity:_Analog_TDS_Sensor_/_Meter_For_Arduino_SKU:_SEN0244
+
+ไม่ต้องใช้ Temperature Sensor - ใช้อุณหภูมิคงที่ 25°C
+เหมาะสำหรับ:
+- ระบบในร่มที่อุณหภูมิคงที่
+- งานทั่วไปที่ไม่ต้องการความแม่นยำสูงมาก
+- ต้องการความง่ายในการติดตั้ง
+
+Ported to MicroPython by Cap_Apiluk
+GNU Lesser General Public License.
+"""
+
 import machine
 import time
+import json
 
-# --- Global Config ---
-_k_value = 1.0       # ค่า Calibration Factor
-_adc_pin = None
-_adc_res = 4095.0    # ESP32 12-bit ADC Resolution
-_v_ref = 3.3         # Reference Voltage (V)
+class GravityTDS:
+    """
+    DFRobot Gravity TDS Sensor Class (Simplified - No Temp Sensor)
+    
+    Features:
+    - Median filtering for stable readings
+    - NO temperature sensor required (fixed at 25°C)
+    - Auto-save calibration to file
+    - Simple calibration with standard solution
+    """
+    
+    # Constants
+    SCOUNT = 30  # Sample count for median filter
+    FIXED_TEMPERATURE = 25.0  # ใช้อุณหภูมิคงที่
+    
+    def __init__(self):
+        """Initialize TDS sensor"""
+        self._pin = None
+        self._adc = None
+        self._aref = 3.3  # ESP32 voltage
+        self._adc_range = 4095  # ESP32 12-bit
+        self._k_value = 1.0  # Calibration factor
+        
+        # TDS/EC values
+        self._tds_value = 0.0
+        self._ec_value = 0.0
+        
+        # Calibration file
+        self._cal_file = "/tds_calibration.json"
+        
+    def set_pin(self, pin):
+        """Set ADC pin number
+        
+        Args:
+            pin: GPIO pin number (ADC capable: 32-39 for ESP32)
+        """
+        self._pin = pin
+        self._adc = machine.ADC(machine.Pin(pin))
+        self._adc.atten(machine.ADC.ATTN_11DB)  # 0-3.3V range
+        self._adc.width(machine.ADC.WIDTH_12BIT)
+        
+    def begin(self):
+        """Initialize sensor and load calibration"""
+        if self._adc is None:
+            raise ValueError("Please call set_pin() before begin()")
+        
+        # Load calibration
+        self._load_calibration()
+        print("GravityTDS Sensor Ready")
+        print(f"Pin: GPIO {self._pin}")
+        print(f"Temperature: {self.FIXED_TEMPERATURE}C (Fixed)")
+        print(f"K-value: {self._k_value:.4f}")
+        
+    def _get_median_num(self, arr):
+        """Get median value using bubble sort
+        
+        Args:
+            arr: Array of values
+            
+        Returns:
+            int: Median value
+        """
+        temp = arr.copy()
+        n = len(temp)
+        
+        # Bubble sort
+        for j in range(n - 1):
+            for i in range(n - j - 1):
+                if temp[i] > temp[i + 1]:
+                    temp[i], temp[i + 1] = temp[i + 1], temp[i]
+        
+        # Return median
+        if (n & 1) > 0:
+            return temp[(n - 1) // 2]
+        else:
+            return (temp[n // 2] + temp[n // 2 - 1]) // 2
+    
+    def update(self):
+        """Sample ADC and calculate TDS value
+        
+        Call this before getting TDS/EC values
+        """
+        if self._adc is None:
+            raise ValueError("Sensor not initialized. Call begin() first.")
+        
+        # Collect samples
+        samples = []
+        for _ in range(self.SCOUNT):
+            samples.append(self._adc.read())
+            time.sleep_ms(2)
+        
+        # Get median value
+        analog_average = self._get_median_num(samples)
+        
+        # Convert to voltage
+        average_voltage = analog_average * self._aref / self._adc_range
+        
+        # Temperature compensation at 25°C (coefficient = 1.0, no change)
+        compensation_coefficient = 1.0 + 0.02 * (self.FIXED_TEMPERATURE - 25.0)
+        compensation_voltage = average_voltage / compensation_coefficient
+        
+        # Convert voltage to TDS using cubic regression
+        # Formula: (133.42*V^3 - 255.86*V^2 + 857.39*V) * 0.5
+        self._tds_value = (133.42 * compensation_voltage**3 - 
+                          255.86 * compensation_voltage**2 + 
+                          857.39 * compensation_voltage) * 0.5
+        
+        # Apply K-value calibration
+        self._tds_value = self._tds_value * self._k_value
+        
+        # Calculate EC (mS/cm)
+        self._ec_value = self._tds_value / 500.0
+        
+    def get_tds_value(self):
+        """Get TDS value in ppm
+        
+        Returns:
+            float: TDS in ppm
+        """
+        return round(self._tds_value, 1)
+    
+    def get_ec_value(self):
+        """Get EC value in mS/cm
+        
+        Returns:
+            float: EC in mS/cm
+        """
+        return round(self._ec_value, 2)
+    
+    def get_ec_value_us(self):
+        """Get EC value in µS/cm
+        
+        Returns:
+            float: EC in µS/cm
+        """
+        return round(self._ec_value * 1000.0, 0)
+    
+    def calibrate(self, standard_value):
+        """Calibrate with known TDS value
+        
+        Args:
+            standard_value: Known TDS value in ppm (e.g., 707)
+        
+        Example:
+            sensor.calibrate(707)  # Standard solution
+        """
+        print("=" * 50)
+        print("Starting Calibration")
+        print("=" * 50)
+        print(f"Standard value: {standard_value} ppm")
+        print("Make sure sensor is in the standard solution!")
+        print()
+        
+        # Take multiple readings
+        print("Taking readings...")
+        readings = []
+        
+        # Temporarily set K to 1.0
+        temp_k = self._k_value
+        self._k_value = 1.0
+        
+        for i in range(5):
+            self.update()
+            value = self.get_tds_value()
+            readings.append(value)
+            print(f"  Reading {i+1}/5: {value:.1f} ppm")
+            time.sleep(2)
+        
+        # Calculate average
+        avg_reading = sum(readings) / len(readings)
+        
+        # Calculate new K-value
+        if avg_reading > 0:
+            new_k = standard_value / avg_reading
+            self._k_value = new_k
+            self._save_calibration()
+            
+            print()
+            print("=" * 50)
+            print("Calibration Complete!")
+            print("=" * 50)
+            print(f"Average reading:  {avg_reading:.1f} ppm")
+            print(f"Standard value:   {standard_value:.1f} ppm")
+            print(f"New K-value:      {new_k:.4f}")
+            print(f"Error:            {abs(standard_value - avg_reading):.1f} ppm")
+            print("=" * 50)
+            
+            # Test reading
+            print("\nTesting calibrated reading...")
+            time.sleep(1)
+            self.update()
+            test = self.get_tds_value()
+            print(f"Test reading: {test:.1f} ppm (should be ~{standard_value:.0f})")
+            
+            return new_k
+        else:
+            print("\nError: Cannot read sensor!")
+            print("Please check connections.")
+            self._k_value = temp_k
+            return None
+    
+    def set_k_value(self, k):
+        """Set K-value manually
+        
+        Args:
+            k: Calibration factor
+        """
+        self._k_value = float(k)
+        self._save_calibration()
+        print(f"K-value set to: {self._k_value:.4f}")
+        
+    def get_k_value(self):
+        """Get current K-value
+        
+        Returns:
+            float: Current K-value
+        """
+        return self._k_value
+    
+    def _save_calibration(self):
+        """Save calibration to file"""
+        try:
+            data = {
+                'k_value': self._k_value,
+                'calibrated_at': time.time()
+            }
+            with open(self._cal_file, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f"Warning: Could not save calibration: {e}")
+    
+    def _load_calibration(self):
+        """Load calibration from file"""
+        try:
+            with open(self._cal_file, 'r') as f:
+                data = json.load(f)
+                self._k_value = data.get('k_value', 1.0)
+        except:
+            self._k_value = 1.0
+    
+    def reset_calibration(self):
+        """Reset K-value to 1.0"""
+        self._k_value = 1.0
+        self._save_calibration()
+        print("Calibration reset to K=1.0")
+    
+    def print_info(self):
+        """Print all sensor information"""
+        print("=" * 50)
+        print("TDS/EC Sensor Readings")
+        print("=" * 50)
+        print(f"Pin:              GPIO {self._pin}")
+        print(f"Temperature:      {self.FIXED_TEMPERATURE}C (Fixed)")
+        print(f"K-value:          {self._k_value:.4f}")
+        print(f"TDS:              {self._tds_value:.1f} ppm")
+        print(f"EC:               {self._ec_value:.2f} mS/cm")
+        print(f"EC:               {self._ec_value * 1000:.0f} uS/cm")
+        print("=" * 50)
 
-def _init_pin(pin_num):
-    """Initialize ADC pin with proper configuration"""
-    global _adc_pin
-    if _adc_pin is None:
-        _adc_pin = machine.ADC(machine.Pin(pin_num))
-        _adc_pin.atten(machine.ADC.ATTN_11DB)  # 0-3.3V range
-        _adc_pin.width(machine.ADC.WIDTH_12BIT)
 
-def set_kvalue(k):
-    """Set calibration K-value
+# ========================================
+# Simplified API Functions
+# ========================================
+
+_sensor = None
+
+def init(pin=34):
+    """Initialize TDS sensor
     
     Args:
-        k: Calibration factor (ค่าที่ได้จากการ calibrate กับสารละลายมาตรฐาน)
+        pin: ADC pin number (default: 34)
+        
+    Returns:
+        GravityTDS: Sensor object
     """
-    global _k_value
-    _k_value = float(k)
+    global _sensor
+    _sensor = GravityTDS()
+    _sensor.set_pin(pin)
+    _sensor.begin()
+    return _sensor
+
+def get_tds_ppm(pin):
+    """Get TDS value in ppm
+    
+    Args:
+        pin: ADC pin number
+        
+    Returns:
+        float: TDS in ppm
+    """
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
+    
+    _sensor.update()
+    return _sensor.get_tds_value()
+
+def get_ec_mspcm(pin):
+    """Get EC value in mS/cm
+    
+    Args:
+        pin: ADC pin number
+        
+    Returns:
+        float: EC in mS/cm
+    """
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
+    
+    _sensor.update()
+    return _sensor.get_ec_value()
+
+def get_ec_uspcm(pin):
+    """Get EC value in µS/cm
+    
+    Args:
+        pin: ADC pin number
+        
+    Returns:
+        float: EC in µS/cm
+    """
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
+    
+    _sensor.update()
+    return _sensor.get_ec_value_us()
+
+def set_kvalue(k):
+    """Set K-value
+    
+    Args:
+        k: Calibration factor
+    """
+    global _sensor
+    if _sensor is None:
+        init()
+    _sensor.set_k_value(k)
 
 def get_kvalue():
     """Get current K-value
     
     Returns:
-        float: Current calibration factor
+        float: K-value
     """
-    return _k_value
+    global _sensor
+    if _sensor is None:
+        init()
+    return _sensor.get_k_value()
 
-def read_stable_voltage(pin_num):
-    """Read stable voltage using median filtering
-    
-    Method: Multi-sampling + Sorting + Median filter
-    - อ่านค่า 30 ครั้ง
-    - เรียงลำดับและตัดค่าสุดขั้ว (noise) ทิ้ง
-    - หาค่าเฉลี่ยจากค่ากลาง
-    
-    Returns:
-        float: Filtered voltage (V)
-    """
-    _init_pin(pin_num)
-    
-    samples = []
-    # Sampling: อ่านค่า 30 ครั้ง
-    for _ in range(30):
-        samples.append(_adc_pin.read())
-        time.sleep_ms(2)
-    
-    # Sorting & Filtering: เรียงลำดับและตัดค่าขอบ 20 ค่า (10 ต่ำสุด, 10 สูงสุด)
-    samples.sort()
-    valid_samples = samples[10:-10]  # เอาเฉพาะ 10 ค่าตรงกลาง
-    
-    if not valid_samples:
-        return 0.0
-    
-    # Calculate average and convert to voltage
-    avg_raw = sum(valid_samples) / len(valid_samples)
-    return (avg_raw / _adc_res) * _v_ref
-
-def get_tds_ppm(pin):
-    """Calculate TDS (Total Dissolved Solids) without temperature compensation
+def calibrate_sensor(pin, standard_value):
+    """Calibrate sensor
     
     Args:
         pin: ADC pin number
-        
+        standard_value: Known TDS value in ppm (e.g., 707)
+    
     Returns:
-        float: TDS value in ppm (parts per million)
-    
-    Note:
-        - ไม่มีการชดเชยอุณหภูมิ เพื่อความเรียบง่ายและแม่นยำในสภาวะคงที่
-        - ใช้ Cubic regression สำหรับแปลง voltage เป็น ppm
-        - ค่าที่ได้คือ TDS ที่อุณหภูมิห้อง (~25°C)
+        float: New K-value
     """
-    voltage = read_stable_voltage(pin)
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
     
-    # ตัดค่ารบกวนเมื่อไม่ได้จุ่มในน้ำ
-    if voltage < 0.05:
-        return 0.0
-    
-    # Cubic Regression Formula (แม่นยำกว่า Linear)
-    # สูตรนี้ได้จากการ curve fitting กับ TDS sensor มาตรฐาน
-    tds = (133.42 * voltage**3 - 255.86 * voltage**2 + 857.39 * voltage) * 0.5
-    
-    # Apply Calibration Factor
-    return round(tds * _k_value, 1)
-
-def get_ec_mspcm(pin):
-    """Calculate EC (Electrical Conductivity) in mS/cm
-    
-    Args:
-        pin: ADC pin number
-        
-    Returns:
-        float: EC value in mS/cm (milliSiemens per centimeter)
-    
-    Standard Conversion:
-        - 1 mS/cm = 500 ppm (conversion factor 0.5)
-        - สำหรับไฮโดรโปนิกส์ ค่า EC มักอยู่ระหว่าง 0.5-3.0 mS/cm
-    """
-    tds_ppm = get_tds_ppm(pin)
-    # TDS (ppm) = EC (mS/cm) × 500
-    # Therefore: EC (mS/cm) = TDS (ppm) / 500
-    ec = tds_ppm / 500.0
-    return round(ec, 2)
-
-def get_ec_uspcm(pin):
-    """Calculate EC (Electrical Conductivity) in µS/cm
-    
-    Args:
-        pin: ADC pin number
-        
-    Returns:
-        float: EC value in µS/cm (microSiemens per centimeter)
-    
-    Note:
-        - 1 mS/cm = 1000 µS/cm
-        - µS/cm ใช้สำหรับน้ำที่มีความเข้มข้นต่ำ (น้ำดื่ม, น้ำกลั่น)
-        - mS/cm ใช้สำหรับสารละลายที่เข้มข้นกว่า (ไฮโดรโปนิกส์)
-    """
-    ec_ms = get_ec_mspcm(pin)
-    return round(ec_ms * 1000.0, 0)
-
-def read_all_values(pin):
-    """Read and display all values with proper units
-    
-    Args:
-        pin: ADC pin number
-        
-    Returns:
-        dict: Dictionary containing all measurements
-    """
-    voltage = read_stable_voltage(pin)
-    tds = get_tds_ppm(pin)
-    ec_ms = get_ec_mspcm(pin)
-    ec_us = get_ec_uspcm(pin)
-    
-    results = {
-        'voltage': voltage,
-        'tds_ppm': tds,
-        'ec_ms_cm': ec_ms,
-        'ec_us_cm': ec_us,
-        'k_value': _k_value
-    }
-    
-    return results
+    return _sensor.calibrate(standard_value)
 
 def print_readings(pin):
-    """Print formatted readings with units"""
-    data = read_all_values(pin)
-    print("=" * 40)
-    print("TDS/EC Sensor Readings")
-    print("=" * 40)
-    print(f"Voltage:     {data['voltage']:.3f} V")
-    print(f"TDS:         {data['tds_ppm']:.1f} ppm")
-    print(f"EC:          {data['ec_ms_cm']:.2f} mS/cm")
-    print(f"EC:          {data['ec_us_cm']:.0f} µS/cm")
-    print(f"K-value:     {data['k_value']:.4f}")
-    print("=" * 40)
-
-def calibrate_sensor(pin, standard_value, readings_count=5):
-    """ช่วยคำนวณ K-value อัตโนมัติ
+    """Print all sensor readings
     
     Args:
         pin: ADC pin number
-        standard_value: ค่าจากเครื่องมาตรฐาน (ppm หรือ µS/cm)
-        readings_count: จำนวนครั้งที่อ่าน (default: 5)
+    """
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
     
+    _sensor.update()
+    _sensor.print_info()
+
+def read_all_values(pin):
+    """Read all sensor values as dictionary
+    
+    Args:
+        pin: ADC pin number
+        
     Returns:
-        float: K-value ที่คำนวณได้
-    
-    วิธีใช้:
-        1. จุ่มเซ็นเซอร์และเครื่องมาตรฐานในน้ำเดียวกัน
-        2. อ่านค่าจากเครื่องมาตรฐาน (เช่น 650 ppm)
-        3. เรียกฟังก์ชัน: calibrate_sensor(34, 650)
-        4. K-value จะถูกตั้งค่าอัตโนมัติ
-    
-    ตัวอย่าง:
-        >>> calibrate_sensor(34, 650)
-        กำลังอ่านค่า...
-          ครั้งที่ 1: 580.5 ppm
-          ครั้งที่ 2: 582.3 ppm
-          ...
-        K-value = 1.1207
-        ตั้งค่า K-value เรียบร้อย!
+        dict: All sensor values
     """
-    print("=" * 50)
-    print("🔧 เริ่มต้น Calibration")
-    print("=" * 50)
-    print(f"ค่ามาตรฐาน: {standard_value:.1f} ppm/µS/cm")
-    print(f"จำนวนครั้งที่อ่าน: {readings_count}")
-    print()
+    global _sensor
+    if _sensor is None or _sensor._pin != pin:
+        init(pin)
     
-    # ตั้ง K = 1.0 ก่อนอ่านค่า
-    original_k = _k_value
-    set_kvalue(1.0)
+    _sensor.update()
     
-    # อ่านค่าหลายครั้ง
-    readings = []
-    print("📊 กำลังอ่านค่า...")
-    for i in range(readings_count):
-        val = get_tds_ppm(pin)
-        readings.append(val)
-        print(f"  ครั้งที่ {i+1}: {val:.1f} ppm")
-        time.sleep(2)
-    
-    # คำนวณค่าเฉลี่ย
-    avg_reading = sum(readings) / len(readings)
-    
-    # คำนวณ K-value
-    if avg_reading > 0:
-        k_value = standard_value / avg_reading
-    else:
-        print("\n❌ ข้อผิดพลาด: ไม่สามารถอ่านค่าได้")
-        print("   กรุณาตรวจสอบการเชื่อมต่อเซ็นเซอร์")
-        set_kvalue(original_k)
-        return None
-    
-    # แสดงผลลัพธ์
-    print()
-    print("=" * 50)
-    print("📈 ผลลัพธ์การ Calibration")
-    print("=" * 50)
-    print(f"ค่ามาตรฐาน:        {standard_value:.1f} ppm/µS/cm")
-    print(f"ค่าเฉลี่ยที่อ่านได้:  {avg_reading:.1f} ppm")
-    print(f"K-value ใหม่:       {k_value:.4f}")
-    print(f"ความแตกต่าง:       {abs(standard_value - avg_reading):.1f} ppm")
-    print(f"ความคลาดเคลื่อน:    {abs(1 - avg_reading/standard_value) * 100:.2f}%")
-    print("=" * 50)
-    
-    # ตั้งค่า K-value ใหม่
-    set_kvalue(k_value)
-    print(f"\n✅ ตั้งค่า K-value = {k_value:.4f} เรียบร้อย!")
-    
-    # ทดสอบอ่านค่าใหม่
-    print("\n🔍 ทดสอบอ่านค่าหลัง Calibrate...")
-    time.sleep(1)
-    test_val = get_tds_ppm(pin)
-    print(f"   ค่าที่อ่านได้: {test_val:.1f} ppm (ควรใกล้เคียง {standard_value:.1f})")
-    
-    print("\n" + "=" * 50)
-    print("💾 บันทึก K-value นี้เพื่อใช้ต่อไป:")
-    print(f"   set_kvalue({k_value:.4f})")
-    print("=" * 50)
-    
-    return k_value
-
-def monitor_continuous(pin, interval=2):
-    """Monitor sensor values continuously
-    
-    Args:
-        pin: ADC pin number
-        interval: Time between readings in seconds (default: 2)
-    
-    Press Ctrl+C to stop
-    """
-    print("=" * 50)
-    print("📡 เริ่มการติดตามค่าอย่างต่อเนื่อง")
-    print("=" * 50)
-    print(f"K-value: {_k_value:.4f}")
-    print("กด Ctrl+C เพื่อหยุด")
-    print("=" * 50)
-    print()
-    
-    try:
-        count = 0
-        while True:
-            count += 1
-            data = read_all_values(pin)
-            
-            print(f"[{count:04d}] ", end="")
-            print(f"TDS: {data['tds_ppm']:7.1f} ppm | ", end="")
-            print(f"EC: {data['ec_ms_cm']:5.2f} mS/cm | ", end="")
-            print(f"V: {data['voltage']:.3f} V")
-            
-            time.sleep(interval)
-            
-    except KeyboardInterrupt:
-        print("\n" + "=" * 50)
-        print("⏹️  หยุดการติดตามค่า")
-        print("=" * 50)
-
-# --- ตัวอย่างการใช้งาน ---
-"""
-#############################################
-# วิธีใช้งาน TDS/EC Sensor
-#############################################
-
-import tds_ec_sensor
-
-# --- 1. การใช้งานพื้นฐาน (ก่อน Calibrate) ---
-# อ่านค่า TDS
-tds = tds_ec_sensor.get_tds_ppm(34)
-print(f"TDS: {tds} ppm")
-
-# อ่านค่า EC
-ec_ms = tds_ec_sensor.get_ec_mspcm(34)
-ec_us = tds_ec_sensor.get_ec_uspcm(34)
-print(f"EC: {ec_ms} mS/cm หรือ {ec_us} µS/cm")
-
-# แสดงค่าทั้งหมดพร้อมหน่วย
-tds_ec_sensor.print_readings(34)
-
-
-# --- 2. การ Calibrate (แนะนำ!) ---
-# วิธีที่ 1: ใช้สารละลายมาตรฐาน (EC 1413 µS/cm)
-tds_ec_sensor.calibrate_sensor(34, 1413)
-
-# วิธีที่ 2: ใช้เครื่องสำเร็จรูปเทียบ
-# - จุ่มทั้งเซ็นเซอร์และเครื่องมาตรฐานในน้ำเดียวกัน
-# - สมมติเครื่องแสดง 650 ppm
-tds_ec_sensor.calibrate_sensor(34, 650)
-
-# ตั้งค่า K-value ด้วยตนเอง
-tds_ec_sensor.set_kvalue(1.1207)
-
-
-# --- 3. การใช้งานหลัง Calibrate ---
-# อ่านค่า (จะแม่นยำตาม K-value ที่ตั้งไว้)
-tds_ec_sensor.print_readings(34)
-
-# อ่านค่าเป็น Dictionary
-data = tds_ec_sensor.read_all_values(34)
-print(data)
-# {'voltage': 1.523, 'tds_ppm': 652.3, 'ec_ms_cm': 1.30, 'ec_us_cm': 1304.0, 'k_value': 1.1207}
-
-
-# --- 4. ติดตามค่าอย่างต่อเนื่อง ---
-# อ่านค่าทุก 2 วินาที (กด Ctrl+C เพื่อหยุด)
-tds_ec_sensor.monitor_continuous(34, interval=2)
-
-
-# --- 5. ดูค่า K-value ปัจจุบัน ---
-k = tds_ec_sensor.get_kvalue()
-print(f"K-value ปัจจุบัน: {k}")
-
-
-#############################################
-# ตัวอย่างการใช้งานจริง - ระบบไฮโดรโปนิกส์
-#############################################
-
-import tds_ec_sensor
-import time
-
-# ตั้งค่า K-value ที่ได้จาก Calibrate
-tds_ec_sensor.set_kvalue(1.1207)
-
-# Loop ตรวจสอบ EC ทุก 30 นาที
-while True:
-    data = tds_ec_sensor.read_all_values(34)
-    ec = data['ec_ms_cm']
-    
-    print(f"EC: {ec} mS/cm")
-    
-    # ตรวจสอบค่า EC (เหมาะสำหรับผักสลัด: 1.2-2.0 mS/cm)
-    if ec < 1.2:
-        print("⚠️ EC ต่ำเกินไป - เพิ่มปุ๋ย")
-    elif ec > 2.0:
-        print("⚠️ EC สูงเกินไป - เติมน้ำเจือจาง")
-    else:
-        print("✅ EC อยู่ในช่วงที่เหมาะสม")
-    
-    time.sleep(1800)  # รอ 30 นาที
-
-
-#############################################
-# Tips & Best Practices
-#############################################
-
-1. Calibrate ทุก 1-2 เดือน หรือเมื่อเปลี่ยนเซ็นเซอร์ใหม่
-2. ทำความสะอาดเซ็นเซอร์เป็นประจำด้วยน้ำกลั่น
-3. เก็บเซ็นเซอร์ในน้ำกลั่นเมื่อไม่ใช้งาน (อย่าปล่อยให้แห้ง)
-4. สำหรับไฮโดรโปนิกส์ ใช้ EC (mS/cm) จะเหมาะกว่า TDS (ppm)
-5. ค่า K-value ปกติอยู่ระหว่าง 0.8-1.3
-
-"""
+    return {
+        'tds_ppm': _sensor.get_tds_value(),
+        'ec_ms_cm': _sensor.get_ec_value(),
+        'ec_us_cm': _sensor.get_ec_value_us(),
+        'k_value': _sensor.get_k_value()
+    }

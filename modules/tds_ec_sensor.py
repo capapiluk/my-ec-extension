@@ -2,7 +2,8 @@
 # DFRobot Gravity TDS / EC Sensor
 # MicroBlock Compatible Version (High Accuracy)
 # Temperature fixed at 25°C
-# Ported & Simplified by Cap_Apiluk
+# Auto-init Safe Version
+# Ported & Improved by Cap_Apiluk
 # ==================================================
 
 from machine import ADC, Pin
@@ -14,6 +15,7 @@ AREF = 3.3               # ESP32 reference voltage
 ADC_RANGE = 4095         # 12-bit ADC
 FIXED_TEMP = 25.0        # fixed temperature
 K_VALUE = 1.0            # calibration factor
+DEFAULT_PIN = 34         # default ADC pin
 
 # ----------------- GLOBAL -----------------
 _adc = None
@@ -29,30 +31,33 @@ def _median(arr):
         return arr[n // 2]
     return (arr[n // 2] + arr[n // 2 - 1]) // 2
 
+def _ensure_init(pin=DEFAULT_PIN):
+    global _adc, _pin
+    if _adc is None or _pin != pin:
+        _pin = pin
+        _adc = ADC(Pin(pin))
+        _adc.atten(ADC.ATTN_11DB)
+        _adc.width(ADC.WIDTH_12BIT)
+        time.sleep_ms(300)  # ให้ ADC นิ่ง
+
 # ----------------- API -----------------
 
-def tds_init(pin):
+def tds_init(pin=DEFAULT_PIN):
     """
-    เริ่มต้นเซนเซอร์ TDS
-    pin = ADC GPIO (32-39)
+    เริ่มต้นเซนเซอร์ TDS (เรียกหรือไม่เรียกก็ได้)
     """
-    global _adc, _pin
-    _pin = pin
-    _adc = ADC(Pin(pin))
-    _adc.atten(ADC.ATTN_11DB)
-    _adc.width(ADC.WIDTH_12BIT)
+    _ensure_init(pin)
 
-def tds_update():
+def tds_update(pin=DEFAULT_PIN):
     """
     อ่านค่าและคำนวณ TDS / EC
     """
     global _tds, _ec
 
-    if _adc is None:
-        return
+    _ensure_init(pin)
 
     buf = []
-    for i in range(SCOUNT):
+    for _ in range(SCOUNT):
         buf.append(_adc.read())
         time.sleep_ms(2)
 
@@ -70,26 +75,30 @@ def tds_update():
     _tds = round(tds, 1)
     _ec = round(tds / 500.0, 2)
 
-def get_tds_ppm():
+# ----------------- READ FUNCTIONS -----------------
+
+def get_tds_ppm(pin=DEFAULT_PIN):
     """
     อ่านค่า TDS (ppm)
     """
-    tds_update()
+    tds_update(pin)
     return _tds
 
-def get_ec_us():
+def get_ec_us(pin=DEFAULT_PIN):
     """
     อ่านค่า EC (µS/cm)
     """
-    tds_update()
+    tds_update(pin)
     return int(_ec * 1000)
 
-def get_ec_ms():
+def get_ec_ms(pin=DEFAULT_PIN):
     """
     อ่านค่า EC (mS/cm)
     """
-    tds_update()
+    tds_update(pin)
     return _ec
+
+# ----------------- CALIBRATION -----------------
 
 def set_k_value(k):
     """
@@ -104,8 +113,6 @@ def get_k_value():
     """
     return K_VALUE
 
-# ----------------- CALIBRATION HELPERS -----------------
-
 def calculate_k(standard_ppm, measured_ppm):
     """
     คำนวณค่า K จากน้ำมาตรฐาน
@@ -114,13 +121,28 @@ def calculate_k(standard_ppm, measured_ppm):
         return 1.0
     return standard_ppm / measured_ppm
 
-def calibrate_with_standard(standard_ppm):
+def calibrate_with_standard(pin, standard_ppm):
     """
-    คาลิเบรตแบบง่าย (ต้องแช่น้ำมาตรฐานก่อนเรียก)
+    Calibrate แบบง่าย (แช่น้ำมาตรฐานก่อน)
     """
     global K_VALUE
-    tds_update()
+    tds_update(pin)
     raw = _tds
     if raw > 0:
         K_VALUE = standard_ppm / raw
     return K_VALUE
+
+# ----------------- DEBUG -----------------
+
+def read_all(pin=DEFAULT_PIN):
+    """
+    อ่านค่าทั้งหมด (ใช้ debug)
+    """
+    tds_update(pin)
+    return {
+        "pin": _pin,
+        "tds_ppm": _tds,
+        "ec_ms": _ec,
+        "ec_us": int(_ec * 1000),
+        "k_value": K_VALUE
+    }

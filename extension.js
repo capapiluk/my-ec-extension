@@ -4,7 +4,7 @@
     author: "Cap_Apiluk",
     category: "Sensor",
     version: "4.0.0",
-    icon: "/static/icon.png",
+    icon: "/static/fertilizer.png",
     color: "#27AE60",
     blocks: [
         // Block 1: อ่านค่า TDS (ppm)

@@ -10,7 +10,7 @@ Blockly.Python['ec_read_tds_simple'] = function(block) {
   var pin = Blockly.Python.valueToCode(block, 'pin', Blockly.Python.ORDER_ATOMIC) || '34';
   return ['tds_ec_sensor.get_tds_ppm(' + pin + ')', Blockly.Python.ORDER_ATOMIC];
 };
-
+ 
 // EC (µS/cm)
 Blockly.Python['ec_read_us_simple'] = function(block) {
   Blockly.Python.definitions_['import_tds_ec_sensor'] = 'import tds_ec_sensor';

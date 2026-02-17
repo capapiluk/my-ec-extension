@@ -1,113 +1,75 @@
 // ========================================
-// TDS/EC Sensor Blocks Definition
-// Version 4.0.0 - Without Temperature Compensation
+// TDS/EC Sensor Blocks สำหรับ ป.6 (Simplified)
+// Version 4.2.0 - ใช้งานง่าย เหมาะกับเด็ก
+// อ่านได้ทุกหน่วย: TDS (ppm), EC (µS/cm, mS/cm)
 // ========================================
 
 // Block 1: อ่านค่า TDS (ppm)
-Blockly.Blocks['ec_read_tds_pro'] = {
+Blockly.Blocks['ec_read_tds_simple'] = {
   init: function() {
     this.appendValueInput("pin")
         .setCheck("Number")
-        .appendField("อ่านค่า TDS (ppm) ขา");
+        .appendField("💧 TDS (ความเค็ม) ขา");
     this.setOutput(true, "Number");
-    this.setColour("#2980B9"); // สีฟ้าน้ำ
-    this.setTooltip("อ่านค่า TDS (Total Dissolved Solids) ในหน่วย ppm");
+    this.setColour("#3498DB"); // สีฟ้าน้ำ
+    this.setTooltip("อ่านค่า TDS (ความเค็ม) ในหน่วย ppm");
     this.setHelpUrl("");
   }
 };
 
-// Block 2: อ่านค่า EC (mS/cm)
-Blockly.Blocks['ec_read_ms_pro'] = {
+// Block 2: อ่านค่า EC (µS/cm)
+Blockly.Blocks['ec_read_us_simple'] = {
   init: function() {
     this.appendValueInput("pin")
         .setCheck("Number")
-        .appendField("อ่านค่า EC (mS/cm) ขา");
-    this.setOutput(true, "Number");
-    this.setColour("#27AE60"); // สีเขียวเกษตร
-    this.setTooltip("อ่านค่า EC (Electrical Conductivity) ในหน่วย mS/cm สำหรับไฮโดรโปนิกส์");
-    this.setHelpUrl("");
-  }
-};
-
-// Block 3: อ่านค่า EC (µS/cm)
-Blockly.Blocks['ec_read_us_pro'] = {
-  init: function() {
-    this.appendValueInput("pin")
-        .setCheck("Number")
-        .appendField("อ่านค่า EC (µS/cm) ขา");
+        .appendField("⚡ EC (ไฟฟ้า) ขา");
     this.setOutput(true, "Number");
     this.setColour("#16A085"); // สีเขียวน้ำทะเล
-    this.setTooltip("อ่านค่า EC (Electrical Conductivity) ในหน่วย µS/cm สำหรับน้ำดื่ม/น้ำบริสุทธิ์");
+    this.setTooltip("อ่านค่า EC ในหน่วย µS/cm (ใช้กับปากกาวัด)");
     this.setHelpUrl("");
   }
 };
 
-// Block 4: ตั้งค่า K-Value
-Blockly.Blocks['ec_set_k_pro'] = {
-  init: function() {
-    this.appendValueInput("k")
-        .setCheck("Number")
-        .appendField("ตั้งค่า K-Value");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#D35400"); // สีส้มสำหรับตั้งค่า
-    this.setTooltip("ตั้งค่าตัวคูณเพื่อ Calibrate (K = ค่ามาตรฐาน / ค่าที่อ่านได้)");
-    this.setHelpUrl("");
-  }
-};
-
-// Block 5: Calibrate อัตโนมัติ
-Blockly.Blocks['ec_calibrate_auto'] = {
+// Block 3: อ่านค่า EC (mS/cm)
+Blockly.Blocks['ec_read_ms_simple'] = {
   init: function() {
     this.appendValueInput("pin")
         .setCheck("Number")
-        .appendField("Calibrate Sensor ขา");
-    this.appendValueInput("standard")
-        .setCheck("Number")
-        .appendField("ค่ามาตรฐาน (ppm)");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#E67E22"); // สีส้มสด
-    this.setTooltip("Calibrate อัตโนมัติโดยเทียบกับเครื่องสำเร็จรูป");
-    this.setHelpUrl("");
-  }
-};
-
-// Block 6: ดูค่า K-Value ปัจจุบัน
-Blockly.Blocks['ec_get_k_pro'] = {
-  init: function() {
-    this.appendDummyInput()
-        .appendField("ดูค่า K-Value ปัจจุบัน");
+        .appendField("⚡ EC (mS/cm) ขา");
     this.setOutput(true, "Number");
-    this.setColour("#95A5A6"); // สีเทา
-    this.setTooltip("แสดงค่า K-Value ที่ตั้งไว้");
+    this.setColour("#1ABC9C"); // สีเขียวเข้ม
+    this.setTooltip("อ่านค่า EC ในหน่วย mS/cm");
     this.setHelpUrl("");
   }
 };
 
-// Block 7: อ่านค่าทั้งหมด (Dictionary)
-Blockly.Blocks['ec_read_all_values'] = {
+// Block 4: Calibrate ง่าย ๆ
+Blockly.Blocks['ec_calibrate_simple'] = {
   init: function() {
     this.appendValueInput("pin")
         .setCheck("Number")
-        .appendField("อ่านค่าทั้งหมด (Dict) ขา");
-    this.setOutput(true, "Dictionary");
-    this.setColour("#8E44AD"); // สีม่วง
-    this.setTooltip("อ่านค่า TDS, EC (mS/cm, µS/cm), Voltage และ K-value พร้อมกัน");
-    this.setHelpUrl("");
-  }
-};
-
-// Block 8: แสดงค่าพร้อมหน่วย
-Blockly.Blocks['ec_print_readings'] = {
-  init: function() {
-    this.appendValueInput("pin")
+        .appendField("🎯 ปรับแก้เซนเซอร์ ขา");
+    this.appendValueInput("standard_ec")
         .setCheck("Number")
-        .appendField("แสดงค่าเซ็นเซอร์ ขา");
+        .appendField("เทียบกับปากกาครู (µS/cm)");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour("#34495E"); // สีน้ำเงินเข้ม
-    this.setTooltip("แสดงค่าทั้งหมดพร้อมหน่วยแบบสวยงาม");
+    this.setColour("#F39C12"); // สีส้มทอง
+    this.setTooltip("เทียบค่าจากเซนเซอร์กับปากกาวัดของครู");
+    this.setHelpUrl("");
+  }
+};
+
+// Block 5: แสดงผลแบบสวยงาม
+Blockly.Blocks['ec_show_result'] = {
+  init: function() {
+    this.appendValueInput("pin")
+        .setCheck("Number")
+        .appendField("📊 แสดงผลการวัด ขา");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#9B59B6"); // สีม่วง
+    this.setTooltip("แสดงผลการวัดแบบสวยงาม");
     this.setHelpUrl("");
   }
 };

@@ -72,7 +72,7 @@
                 </block>
             `
         }
-    ],
+    ], 
     // JavaScript files (Blockly blocks and generators)
     js: [
         "/blocks.js",
